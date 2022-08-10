@@ -1,0 +1,163 @@
+name: Scaleway Kustomize Deploy
+description: Deploy to Scaleway using a Kustomize config
+inputs:
+  secret-key:
+    description: Scaleway secret key
+    required: true
+  cluster-id:
+    description: |
+      Scaleway Cluster ID.
+      Can be retrieved with `scw k8s cluster list name=$CLUSTER_NAME -o template="{{.ID}}"`.
+    required: true
+  region:
+    description: Scaleway region (e.g. "fr-par")
+    required: true
+  docker-namespace:
+    description: Scaleway Docker registry namespace (e.g. "my-namespace")
+    required: true
+  kustomization-base-dir:
+    description: Path to base kustomize directory
+    required: true
+    default: kustomize/base
+  kustomization-dir:
+    description: Path to the kustomize directory to apply / deploy
+    required: true
+  create-k8s-namespace:
+    description: Create Kubernetes namespace if it does not exist
+    required: true
+    default: "true"
+  image-name:
+    description: Docker image name (e.g. `my-app`)
+    required: true
+  image-tag:
+    description: Docker image tag to deploy (e.g. `0.9.14`)
+    required: true
+  age-secret-key:
+    description: Secret key to decrypt deploy secrets with
+    required: false
+  encrypted-filename:
+    description: Filename/subpath inside `kustomization-dir` to a file with age encrypted secrets to decrypt
+    required: true
+    default: secrets.env
+  decrypted-filename:
+    description: Filename/subpath inside `kustomization-dir` to which the age encrypted secrets will be decrypted to
+    required: true
+    default: secrets.env.dec
+  create-image-pull-secret:
+    description: Create an image pull secret named "rg.`$region`.scw.cloud"
+    required: true
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        clean: false
+
+    - name: Parse base kustomization.yaml
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de  # 0.0.12
+      id: kustomization_base
+      with:
+        yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+
+    - name: Parse overlay kustomization.yaml
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de  # 0.0.12
+      id: kustomization_overlay
+      with:
+        yaml-file: ${{ inputs.kustomization-dir }}/kustomization.yaml
+
+    - name: Print steps (including output from yamler)
+      shell: bash
+      if: ${{ env.DEBUG == 'true' }}
+      run: |
+        echo '${{ toJSON(steps) }}'
+
+    - name: Decrypt secrets with `age`
+      uses: jacobsvante/age-decrypt-action@v0
+      if: ${{ inputs.age-secret-key && format('{0}/{1}', inputs.kustomization-dir, inputs.encrypted-filename) != '' }}
+      with:
+        secret-key: ${{ inputs.age-secret-key }}
+        input-file: ${{ inputs.kustomization-dir }}/${{ inputs.encrypted-filename }}
+        output-file: ${{ inputs.kustomization-dir }}/${{ inputs.decrypted-filename }}
+
+    - name: Substitute newTag
+      shell: bash
+      if: ${{ steps.kustomization_base.outputs.images__0__newtag }}
+      env:
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+      run: |
+        sed -i.bkp "s/newTag: .*/newTag: \"$IMAGE_TAG\"/g" $KUSTOMIZE_FILE
+
+    - name: Substitute newName
+      shell: bash
+      if: ${{ steps.kustomization_base.outputs.images__0__newname }}
+      env:
+        DOCKER_SERVER: rg.${{ inputs.region }}.scw.cloud
+        DOCKER_NAMESPACE: ${{ inputs.docker-namespace }}
+        IMAGE_NAME: ${{ inputs.image-name }}
+        KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
+      run: |
+        sed -i.bkp "s|newName: .*|newName: \"$DOCKER_SERVER/$DOCKER_NAMESPACE/$IMAGE_NAME\"|" $KUSTOMIZE_FILE
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Get kustomize output
+      shell: bash
+      run: |
+        kubectl kustomize ${{ env.KUSTOMIZATION_DIR }} > output.yaml
+        cat output.yaml
+
+    - name: Setup Scaleway kubeconfig
+      shell: bash
+      env:
+        URL: https://api.scaleway.com/k8s/v1/regions/${{ inputs.region }}/clusters/${{ inputs.cluster-id }}/kubeconfig?dl=1
+      run: |
+        mkdir ~/.kube
+        if [[ $DRY_RUN == 'true' ]]; then
+          echo "[dry run] Would download kubeconfig from $URL and store as ~/.kube/config"
+        else
+          curl $URL \
+            --header "X-Auth-Token: ${{ inputs.secret-key }}" \
+            --fail \
+            > ~/.kube/config
+        fi
+
+    - name: Create image pull secret
+      shell: bash
+      if: ${{ inputs.create-image-pull-secret == 'true' }}
+      env:
+        SECRET_NAME: rg.${{ inputs.region }}.scw.cloud
+      run: |
+        if [[ $DRY_RUN == 'true' ]]; then
+          echo "[dry run] Would create k8s docker-registry secret rg.$SECRET_NAME.scw.cloud"
+        else
+          kubectl create secret docker-registry \
+            $SECRET_NAME \
+            --docker-server=rg.${{ inputs.region }}.scw.cloud \
+            --docker-username=${{ inputs.docker-namespace }} \
+            --docker-password=${{ inputs.secret-key }} || true
+        fi
+
+    - name: Create k8s namespace
+      shell: bash
+      if: ${{ inputs.create-k8s-namespace && steps.kustomization_overlay.outputs.namespace }}
+      env:
+        NS: ${{ steps.kustomization_overlay.outputs.namespace }}
+      run: |
+        if [[ $DRY_RUN == 'true' ]]; then
+          echo "[dry run] Would create namespace $NS if it doesn't exist"
+        else
+          kubectl get ns $NS || kubectl create ns $NS
+        fi
+
+    - name: Deploy
+      shell: bash
+      run: |
+        if [[ $DRY_RUN == 'true' ]]; then
+          echo "[dry run] Would apply kustomization directory ${{ inputs.kustomization-dir }}"
+        else
+          kubectl apply -k ${{ inputs.kustomization-dir }}
+        fi

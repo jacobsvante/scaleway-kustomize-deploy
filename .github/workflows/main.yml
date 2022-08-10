@@ -1,0 +1,157 @@
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ACTION_NAME: scaleway-kustomize-deploy-action
+
+name: Main
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test action
+    env:
+      KUSTOMIZATION_BASE_DIR: kustomize/base
+      KUSTOMIZATION_DIR: kustomize/overlays/staging
+      AGE_TEST_PUBLIC_KEY: age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6
+      AGE_TEST_SECRET_KEY: AGE-SECRET-KEY-1CDL85PSFWFMMTNZMUZWL6Q4DJYFRGPHX6J7TCMZZURHXUTXPQNNSMF9ZW2
+      DEBUG: "true"
+      DRY_RUN: "true"
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - uses: jacobsvante/setup-age-action@main
+
+      - name: Create dummy kustomize base files
+        shell: bash
+        run: |
+
+          mkdir -p ${{ env.KUSTOMIZATION_BASE_DIR }}
+          cd ${{ env.KUSTOMIZATION_BASE_DIR }}
+
+          echo 'CONFIG_1=MY_VALUE' > config.env
+
+          cat <<EOF > kustomization.yaml
+          resources:
+          - deployment.yaml
+          commonLabels:
+            app: my-app
+            app.kubernetes.io/name: my-app
+            app.kubernetes.io/instance: my-app
+          configMapGenerator:
+          - name: my-app
+            envs:
+            - "config.env"
+          images:
+          - name: APP_IMAGE
+            newName: my-docker-image  # NOTE: Replaced by CI/CD
+            newTag: latest  # NOTE: Replaced by CI/CD
+          EOF
+
+          cat <<EOF > deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: my-app
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: app
+                    image: APP_IMAGE  # NOTE: Will be replaced
+                    imagePullPolicy: IfNotPresent
+                    imagePullSecrets:
+                      - name: rg.fr-par.scw.cloud
+                    envFrom:
+                      - configMapRef:
+                          name: my-app
+                      - secretRef:
+                          name: my-app
+          EOF
+          cd ../..
+
+      - name: Create dummy kustomize overlay files
+        shell: bash
+        run: |
+          mkdir -p $KUSTOMIZATION_DIR
+          cd $KUSTOMIZATION_DIR
+
+          echo 'CONFIG_2=MY_STAGING_SPECIFIC_CONFIG_VALUE' > config.env
+
+          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient $AGE_TEST_PUBLIC_KEY > secrets.env
+
+          cat <<EOF > kustomization.yaml
+          bases:
+            - ../../base
+          namespace: my-k8s-namespace
+          configMapGenerator:
+            - name: my-app
+              behavior: merge
+              envs:
+                - "config.env"
+          secretGenerator:
+            - name: my-app
+              envs:
+                - "secrets.env.dec"
+          EOF
+          cd ../../..
+
+      - name: Run action
+        uses: ./
+        with:
+          secret-key: ABC123
+          cluster-id: abc-123-456-789-012
+          region: fr-par
+          docker-namespace: my-docker-namespace
+          kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
+          kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
+          image-name: my-docker-image
+          image-tag: "0.1.2"
+          age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
+
+      - name: Get kustomize output
+        run: |
+          kubectl kustomize ${{ env.KUSTOMIZATION_DIR }} > output.yaml
+          cat output.yaml
+
+      - name: Test that newTag is as expected
+        run: |
+          grep \
+            'newTag: \"0.1.2\"' \
+            ${{ env.KUSTOMIZATION_BASE_DIR }}/kustomization.yaml
+
+      - name: Test that newName is as expected
+        run: |
+          grep \
+            'newName: \"rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image\"' \
+            ${{ env.KUSTOMIZATION_BASE_DIR }}/kustomization.yaml
+
+      - name: Test that deployment image is as expected
+        run: |
+          grep \
+            'image: rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image:0.1.2' \
+            output.yaml
+
+      - name: Test that deployment namespace is as expected
+        run: |
+          grep 'namespace: my-k8s-namespace' output.yaml
+
+  release-please:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          release-type: simple
+          package-name: ${{ env.ACTION_NAME }}
+          bump-minor-pre-major: true
+      - uses: actions/checkout@v3
+      - name: Tag major and minor versions in Git
+        if: ${{ steps.release.outputs.release_created }}
+        uses: jacobsvante/tag-major-minor-action@v0
+        with:
+          major: ${{ steps.release.outputs.major }}
+          minor: ${{ steps.release.outputs.minor }}
