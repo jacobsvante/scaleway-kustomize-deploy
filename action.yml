@@ -55,7 +55,7 @@ runs:
       uses: juliojimenez/yamler@v0.0.12
       id: kustomization_base
       with:
-        yaml-file: ${{ inputs.kustomization-base }}/kustomization.yaml
+        yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
 
     - name: Print kustomization_base output
       shell: bash
@@ -84,7 +84,7 @@ runs:
     #   if: ${{ steps.kustomization_base.outputs.newTag }}
     #   env:
     #     IMAGE_TAG: ${{ inputs.image-tag }}
-    #     KUSTOMIZE_FILE: ${{ inputs.kustomization-base }}/kustomization.yaml
+    #     KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
     #   run: |
     #     sed -i.bkp "s/newTag: latest/newTag: \"$IMAGE_TAG\"/g" $KUSTOMIZE_FILE
 
@@ -95,7 +95,7 @@ runs:
     #     DOCKER_SERVER: rg.${{ inputs.region }}.scw.cloud
     #     DOCKER_NAMESPACE: ${{ inputs.docker-registry-namespace }}
     #     IMAGE_NAME: ${{ inputs.image-name }}
-    #     KUSTOMIZE_FILE: ${{ inputs.kustomization-base }}/kustomization.yaml
+    #     KUSTOMIZE_FILE: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
     #   run: |
     #     sed -i.bkp "s|newName: .*|newName: \"$DOCKER_SERVER/$DOCKER_NAMESPACE/$IMAGE_NAME\"|" $KUSTOMIZE_FILE
 
