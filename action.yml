@@ -75,13 +75,13 @@ runs:
       run: |
         echo '${{ toJSON(steps) }}'
 
-    # - name: Decrypt secrets with `age`
-    #   uses: jacobsvante/age-decrypt-action@v0
-    #   if: ${{ inputs.age-secret-key && hashFiles(${{ inputs.kustomize-dir }}/inputs.encrypted-filename) != "" }}
-    #   with:
-    #     secret-key: ${{ secrets.age-secret-key }}
-    #     input-file: ${{ inputs.kustomize-dir }}/${{ inputs.encrypted-filename }}
-    #     output-file: ${{ inputs.kustomize-dir }}/${{ inputs.decrypted-filename }}
+    - name: Decrypt secrets with `age`
+      uses: jacobsvante/age-decrypt-action@v0
+      # if: ${{ inputs.age-secret-key }}
+      with:
+        secret-key: ${{ inputs.age-secret-key }}
+        input-file: ${{ inputs.kustomize-dir }}/${{ inputs.encrypted-filename }}
+        output-file: ${{ inputs.kustomize-dir }}/${{ inputs.decrypted-filename }}
 
     # - name: Substitute newTag
     #   shell: bash

@@ -17,15 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: jacobsvante/setup-age-action@main
-      - name: Create dummy kustomize files
+      - name: Create dummy kustomize base files
+        shell: bash
         run: |
 
           mkdir -p kustomize/base
           cd kustomize/base
 
-          echo '
+          echo 'CONFIG_1=MY_VALUE' > config.env
+          cat <<EOF > kustomization.yaml
           resources:
-          - job.yaml
+          - deployment.yaml
           commonLabels:
             app: my-app
             app.kubernetes.io/name: my-app
@@ -38,27 +40,40 @@ jobs:
           - name: APP_IMAGE
             newName: my-docker-image  # NOTE: Replaced by CI/CD
             newTag: latest  # NOTE: Replaced by CI/CD
-          ' > kustomization.yaml
-
+          EOF
           cd ../..
 
+      - name: Create dummy kustomize overlay files
+        shell: bash
+        run: |
           mkdir -p kustomize/overlays/staging
           cd kustomize/overlays/staging
           echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient $AGE_TEST_PUBLIC_KEY > secrets.env
+          cat <<EOF > kustomization.yaml
+          bases:
+            - ../../base
+          namespace: my-k8s-namespace
+          configMapGenerator:
+            - name: my-app
+              behavior: merge
+              envs:
+                - "config.env"
+          secretGenerator:
+            - name: my-app
+              envs:
+                - "secrets.env.dec"
+          EOF
           cd ../../..
 
-        shell: bash
-      - shell: bash
-        run: ls -ahl -R
       # NOTE: Obviously, `main` might refer to a different commit if one is pushed just
       # after the relevant commit was made. Unfortunately one cannot use `github.sha`
       # in `uses`.
-      - uses: jacobsvante/scaleway-kustomize-deploy-action@main
+      - uses: ./
         with:
           secret-key: ABC123
           cluster-id: abc-123-456-789-012
           region: fr-par
-          docker-registry-namespace: my-namespace
+          docker-registry-namespace: my-docker-registry-namespace
           kustomize-dir: kustomize/overlays/staging
           image-name: my-docker-image
           image-tag: "0.1.2"
