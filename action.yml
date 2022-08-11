@@ -18,7 +18,7 @@ inputs:
     required: true
     default: "kustomize/base"
   kustomization-dir:
-    description: Path to the kustomize directory to apply / deploy
+    description: Path to the kustomize directory to apply / deploy (e.g. `kustomize/overlays/production`)
     required: true
   create-k8s-namespace:
     description: Create Kubernetes namespace if it does not exist
@@ -42,7 +42,7 @@ inputs:
     required: true
     default: "secrets.env.dec"
   create-image-pull-secret:
-    description: Create an image pull secret named "rg.`$region`.scw.cloud"
+    description: Create an image pull secret named "rg.`$region`.scw.cloud", to be referenced in `imagePullSecrets` in a k8s deployment/job
     required: true
     default: "true"
 
