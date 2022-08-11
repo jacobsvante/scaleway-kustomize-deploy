@@ -11,6 +11,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Test action
+    env:
+      AGE_TEST_PUBLIC_KEY: age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6
+      AGE_TEST_SECRET_KEY: AGE-SECRET-KEY-1CDL85PSFWFMMTNZMUZWL6Q4DJYFRGPHX6J7TCMZZURHXUTXPQNNSMF9ZW2
     steps:
       - uses: actions/checkout@v3
       - uses: jacobsvante/setup-age-action@main
@@ -41,7 +44,7 @@ jobs:
 
           mkdir -p kustomize/overlays/staging
           cd kustomize/overlays/staging
-          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6 > secrets.env
+          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient $AGE_TEST_PUBLIC_KEY > secrets.env
           cd ../../..
 
         shell: bash
@@ -59,9 +62,7 @@ jobs:
           kustomize-dir: kustomize/overlays/staging
           image-name: my-docker-image
           image-tag: "0.1.2"
-          # created: 2022-08-10T12:06:01+02:00
-          # public key: age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6
-          age-secret-key: AGE-SECRET-KEY-1CDL85PSFWFMMTNZMUZWL6Q4DJYFRGPHX6J7TCMZZURHXUTXPQNNSMF9ZW2
+          age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
   release-please:
     runs-on: ubuntu-latest
     needs: [test]
