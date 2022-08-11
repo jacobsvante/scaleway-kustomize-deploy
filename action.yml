@@ -31,7 +31,7 @@ inputs:
     description: Docker image tag to deploy (e.g. `0.9.14`)
     required: true
   age-secret-key:
-    description: Secret key to decrypt deploy secrets with
+    description: Secret key to decrypt deploy secrets with (e.g. `AGE-SECRET-KEY-123456`)
     required: false
   encrypted-filename:
     description: Filename/subpath inside `kustomization-dir` to a file with age encrypted secrets to decrypt
