@@ -105,7 +105,7 @@ runs:
     - name: Get kustomize output
       shell: bash
       run: |
-        kubectl kustomize ${{ env.KUSTOMIZATION_DIR }} > output.yaml
+        kubectl kustomize ${{ inputs.kustomization-dir }} > output.yaml
         cat output.yaml
 
     - name: Setup Scaleway kubeconfig
