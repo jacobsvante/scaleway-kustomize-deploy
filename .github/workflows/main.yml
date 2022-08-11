@@ -45,6 +45,8 @@ jobs:
           cd ../../..
 
         shell: bash
+      - shell: bash
+        run: ls -ahl -R
       # NOTE: Obviously, `main` might refer to a different commit if one is pushed just
       # after the relevant commit was made. Unfortunately one cannot use `github.sha`
       # in `uses`.
