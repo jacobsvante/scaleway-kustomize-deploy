@@ -5,9 +5,7 @@ inputs:
     description: Scaleway secret key
     required: true
   cluster-id:
-    description: |
-      Scaleway Cluster ID.
-      Can be retrieved with `scw k8s cluster list name=$CLUSTER_NAME -o template="{{.ID}}"`.
+    description: Scaleway Cluster ID. Can be retrieved with `scw k8s cluster list name=$CLUSTER_NAME -o template="{{.ID}}"`.
     required: true
   region:
     description: Scaleway region (e.g. "fr-par")
