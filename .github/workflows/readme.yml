@@ -1,0 +1,19 @@
+name: Readme
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-readme-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install --global action-docs@1.0.4
+      - run: action-docs --update-readme
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v4
+        with:
+          commit-message: "docs: Update readme"
