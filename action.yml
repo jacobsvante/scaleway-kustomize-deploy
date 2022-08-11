@@ -61,7 +61,8 @@ runs:
 
     - name: Print kustomization_base output
       shell: bash
-      run: echo ${{ toJSON(steps.kustomization_base.outputs) }}
+      run: |
+        echo '${{ toJSON(steps) }}'
 
     - name: Parse overlay kustomization.yaml
       uses: juliojimenez/yamler@v0.0.12
@@ -71,7 +72,8 @@ runs:
 
     - name: Print kustomization_overlay output
       shell: bash
-      run: echo ${{ toJSON(steps.kustomization_overlay.outputs) }}
+      run: |
+        echo '${{ toJSON(steps) }}'
 
     # - name: Decrypt secrets with `age`
     #   uses: jacobsvante/age-decrypt-action@v0
