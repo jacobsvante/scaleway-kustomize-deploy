@@ -18,7 +18,7 @@ inputs:
   kustomization-base-dir:
     description: Path to base kustomize directory
     required: true
-    default: kustomize/base
+    default: "kustomize/base"
   kustomization-dir:
     description: Path to the kustomize directory to apply / deploy
     required: true
@@ -38,11 +38,11 @@ inputs:
   encrypted-filename:
     description: Filename/subpath inside `kustomization-dir` to a file with age encrypted secrets to decrypt
     required: true
-    default: secrets.env
+    default: "secrets.env"
   decrypted-filename:
     description: Filename/subpath inside `kustomization-dir` to which the age encrypted secrets will be decrypted to
     required: true
-    default: secrets.env.dec
+    default: "secrets.env.dec"
   create-image-pull-secret:
     description: Create an image pull secret named "rg.`$region`.scw.cloud"
     required: true
@@ -56,13 +56,13 @@ runs:
         clean: false
 
     - name: Parse base kustomization.yaml
-      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de  # 0.0.12
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
       id: kustomization_base
       with:
         yaml-file: ${{ inputs.kustomization-base-dir }}/kustomization.yaml
 
     - name: Parse overlay kustomization.yaml
-      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de  # 0.0.12
+      uses: juliojimenez/yamler@a453cafd89cbb8f33e64da9a488b1d6a675209de # 0.0.12
       id: kustomization_overlay
       with:
         yaml-file: ${{ inputs.kustomization-dir }}/kustomization.yaml
