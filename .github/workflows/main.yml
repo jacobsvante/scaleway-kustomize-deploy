@@ -16,10 +16,34 @@ jobs:
       - uses: jacobsvante/setup-age-action@main
       - name: Create dummy kustomize files
         run: |
+
           mkdir -p kustomize/base
+          cd kustomize/base
+
+          echo '
+          resources:
+          - job.yaml
+          commonLabels:
+            app: my-app
+            app.kubernetes.io/name: my-app
+            app.kubernetes.io/instance: my-app
+          configMapGenerator:
+          - name: my-app
+            envs:
+            - "config.env"
+          images:
+          - name: APP_IMAGE
+            newName: my-docker-image  # NOTE: Replaced by CI/CD
+            newTag: latest  # NOTE: Replaced by CI/CD
+          ' > kustomization.yaml
+
+          cd ../..
+
           mkdir -p kustomize/overlays/staging
-          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6 > kustomize/overlays/staging/secrets.env
-          echo
+          cd kustomize/overlays/staging
+          echo 'MY_FIRST_SECRET=value1\nMY_SECOND_SECRET=value2' | age --encrypt --recipient age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6 > secrets.env
+          cd ../../..
+
         shell: bash
       # NOTE: Obviously, `main` might refer to a different commit if one is pushed just
       # after the relevant commit was made. Unfortunately one cannot use `github.sha`
