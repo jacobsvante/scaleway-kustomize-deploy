@@ -24,7 +24,7 @@ jobs:
       AGE_TEST_PUBLIC_KEY: age1l8paxjj9hd37wu24prsl24nux9ht30690r4lx3tk6hlrdv9rl4cqnm0th6
       AGE_TEST_SECRET_KEY: AGE-SECRET-KEY-1CDL85PSFWFMMTNZMUZWL6Q4DJYFRGPHX6J7TCMZZURHXUTXPQNNSMF9ZW2
       DEBUG: "true"
-      DRY_RUN: "true"
+      KUBECONFIG_DOWNLOAD_DRY_RUN: "true"
     steps:
       - uses: actions/checkout@v3
 
@@ -64,12 +64,12 @@ jobs:
           spec:
             template:
               spec:
+                imagePullSecrets:
+                  - name: rg.fr-par.scw.cloud
                 containers:
                   - name: app
                     image: APP_IMAGE  # NOTE: Will be replaced
                     imagePullPolicy: IfNotPresent
-                    imagePullSecrets:
-                      - name: rg.fr-par.scw.cloud
                     envFrom:
                       - configMapRef:
                           name: my-app
@@ -104,6 +104,12 @@ jobs:
           EOF
           cd ../../..
 
+      - name: Create Kubernetes cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: v0.14.0
+          kubectl_version: v1.24.3
+
       - name: Run action
         uses: ./
         with:
@@ -117,43 +123,33 @@ jobs:
           image-tag: "0.1.2"
           age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
 
-      - name: Get kustomize output
+      - name: Test that namespace was created
         run: |
-          kubectl kustomize ${{ env.KUSTOMIZATION_DIR }} > output.yaml
-          cat output.yaml
+          kubectl get namespace my-k8s-namespace -o yaml
 
-      - name: Test that newTag is as expected
+      - name: Test that image pull secret was created with expected properties
         run: |
-          grep \
-            'newTag: \"0.1.2\"' \
-            ${{ env.KUSTOMIZATION_BASE_DIR }}/kustomization.yaml
-
-      - name: Test that newName is as expected
-        run: |
-          grep \
-            'newName: \"rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image\"' \
-            ${{ env.KUSTOMIZATION_BASE_DIR }}/kustomization.yaml
-
-      - name: Test that deployment image is as expected
-        run: |
-          grep \
-            'image: rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image:0.1.2' \
-            output.yaml
-
-      - name: Test that image pull secret has correct namespace
-        run: |
-          cat image-pull-secret-output.json
-          grep \
-            '"namespace": "my-k8s-namespace"' \
-            image-pull-secret-output.json
-
-      - name: Test that deployment namespace is as expected
-        run: |
+          kubectl get secret -n my-k8s-namespace -o yaml > output.yaml
+          grep 'name: rg.fr-par.scw.cloud' output.yaml
           grep 'namespace: my-k8s-namespace' output.yaml
+
+      - name: Test that deployment was made with expected properties
+        run: |
+          kubectl get deploy -n my-k8s-namespace -o yaml > output.yaml
+          grep 'image: rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image:0.1.2' output.yaml
+          grep 'namespace: my-k8s-namespace' output.yaml
+
+  post-test:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Expect files created by action to no longer exist
+        run: |
+          [[ ! -f deploy-output.yaml ]]
 
   release-please:
     runs-on: ubuntu-latest
-    needs: [pre-commit, test]
+    needs: [pre-commit, test, post-test]
     steps:
       - uses: google-github-actions/release-please-action@v3
         id: release

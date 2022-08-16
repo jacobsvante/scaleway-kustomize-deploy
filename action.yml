@@ -45,6 +45,10 @@ inputs:
     description: Create an image pull secret named "rg.`$region`.scw.cloud", to be referenced in `imagePullSecrets` in a k8s deployment/job
     required: true
     default: "true"
+  k8s-dry-run:
+    description: Used to enable `--dry-run=client|server`. See kubectl create/apply help section for more info.
+    required: true
+    default: "none"
 
 runs:
   using: composite
@@ -113,9 +117,9 @@ runs:
       env:
         URL: https://api.scaleway.com/k8s/v1/regions/${{ inputs.region }}/clusters/${{ inputs.cluster-id }}/kubeconfig?dl=1
       run: |
-        mkdir ~/.kube
-        if [[ $DRY_RUN == 'true' ]]; then
-          echo "[dry run] Would download kubeconfig from $URL and store as ~/.kube/config"
+        mkdir ~/.kube || true
+        if [[ $KUBECONFIG_DOWNLOAD_DRY_RUN == 'true' ]]; then
+          echo "[dry run] Would download kubeconfig from $URL and write to ~/.kube/config"
         else
           curl $URL \
             --header "X-Auth-Token: ${{ inputs.secret-key }}" \
@@ -127,13 +131,15 @@ runs:
       shell: bash
       if: ${{ inputs.create-k8s-namespace && steps.kustomization_overlay.outputs.namespace }}
       env:
-        NS: ${{ steps.kustomization_overlay.outputs.namespace }}
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace }}
       run: |
-        if [[ $DRY_RUN == 'true' ]]; then
-          echo "[dry run] Would create namespace $NS if it doesn't exist"
-        else
-          kubectl get ns $NS || kubectl create ns $NS
-        fi
+        [[ ${{ inputs.k8s-dry-run }} != 'none' ]] \
+          && echo "[dry run] Creating namespace $K8S_NAMESPACE if it doesn't exist..."
+        kubectl get namespace $K8S_NAMESPACE \
+        || kubectl create namespace \
+            --dry-run=${{ inputs.k8s-dry-run }} \
+            --output=yaml \
+            $K8S_NAMESPACE
 
     - name: Create image pull secret
       shell: bash
@@ -142,21 +148,26 @@ runs:
         SECRET_NAME: rg.${{ inputs.region }}.scw.cloud
         K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
       run: |
-        [[ $DRY_RUN == 'true' ]] && echo "[dry run] Creating k8s docker-registry secret..."
-        kubectl create secret docker-registry \
+        kubectl get namespace
+        kubectl get pod --all-namespaces
+        [[ ${{ inputs.k8s-dry-run }} != 'none' ]] \
+          && echo "[dry run] Creating k8s docker-registry secret..."
+        kubectl get secret $SECRET_NAME \
+        || kubectl create secret docker-registry \
           $SECRET_NAME \
           --namespace $K8S_NAMESPACE \
           --docker-server=rg.${{ inputs.region }}.scw.cloud \
           --docker-username=${{ inputs.docker-namespace }} \
           --docker-password=${{ inputs.secret-key }} \
-          --dry-run=${{ env.DRY_RUN == 'true' && 'client' || 'none' }} \
-          --output=json | tee image-pull-secret-output.json || true
+          --dry-run=${{ inputs.k8s-dry-run }} \
+          --output=yaml
 
     - name: Deploy
       shell: bash
       run: |
-        if [[ $DRY_RUN == 'true' ]]; then
-          echo "[dry run] Would apply kustomization directory ${{ inputs.kustomization-dir }}"
-        else
-          kubectl apply -k ${{ inputs.kustomization-dir }}
-        fi
+        [[ ${{ inputs.k8s-dry-run }} != 'none' ]] \
+          && echo "[dry run] Applying kustomization ${{ inputs.kustomization-dir }}..."
+        kubectl apply \
+          --kustomize=${{ inputs.kustomization-dir }} \
+          --dry-run=${{ inputs.k8s-dry-run }} \
+          --output=yaml
