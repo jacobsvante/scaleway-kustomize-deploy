@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.1.1...v0.2.0) (2022-08-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* Use k8s namespace for image pull secret
+
+### Features
+
+* Add input to set kubectl apply/create --dry-run ([7513f3a](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/7513f3a33974c35e4579e0602c3397c7417ee6d0))
+
+
+### Bug Fixes
+
+* Use k8s namespace for image pull secret ([06e4070](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/06e407032c85c8857557e77606e795603b616933))
+
 ## [0.1.1](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.1.0...v0.1.1) (2022-08-11)
 
 
