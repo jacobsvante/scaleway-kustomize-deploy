@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.0...v0.2.1) (2022-08-16)
+
+
+### Bug Fixes
+
+* Look for existing Secret in correct Namespace ([c291be7](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/c291be79dae49396db130671e1d8e332ab20b080))
+
 ## [0.2.0](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.1.1...v0.2.0) (2022-08-16)
 
 
