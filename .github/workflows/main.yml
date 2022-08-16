@@ -140,6 +140,13 @@ jobs:
             'image: rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image:0.1.2' \
             output.yaml
 
+      - name: Test that image pull secret has correct namespace
+        run: |
+          cat image-pull-secret-output.json
+          grep \
+            '"namespace": "my-k8s-namespace"' \
+            image-pull-secret-output.json
+
       - name: Test that deployment namespace is as expected
         run: |
           grep 'namespace: my-k8s-namespace' output.yaml

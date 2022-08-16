@@ -123,22 +123,6 @@ runs:
             > ~/.kube/config
         fi
 
-    - name: Create image pull secret
-      shell: bash
-      if: ${{ inputs.create-image-pull-secret == 'true' }}
-      env:
-        SECRET_NAME: rg.${{ inputs.region }}.scw.cloud
-      run: |
-        if [[ $DRY_RUN == 'true' ]]; then
-          echo "[dry run] Would create k8s docker-registry secret rg.$SECRET_NAME.scw.cloud"
-        else
-          kubectl create secret docker-registry \
-            $SECRET_NAME \
-            --docker-server=rg.${{ inputs.region }}.scw.cloud \
-            --docker-username=${{ inputs.docker-namespace }} \
-            --docker-password=${{ inputs.secret-key }} || true
-        fi
-
     - name: Create k8s namespace
       shell: bash
       if: ${{ inputs.create-k8s-namespace && steps.kustomization_overlay.outputs.namespace }}
@@ -150,6 +134,23 @@ runs:
         else
           kubectl get ns $NS || kubectl create ns $NS
         fi
+
+    - name: Create image pull secret
+      shell: bash
+      if: ${{ inputs.create-image-pull-secret == 'true' }}
+      env:
+        SECRET_NAME: rg.${{ inputs.region }}.scw.cloud
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
+      run: |
+        [[ $DRY_RUN == 'true' ]] && echo "[dry run] Creating k8s docker-registry secret..."
+        kubectl create secret docker-registry \
+          $SECRET_NAME \
+          --namespace $K8S_NAMESPACE \
+          --docker-server=rg.${{ inputs.region }}.scw.cloud \
+          --docker-username=${{ inputs.docker-namespace }} \
+          --docker-password=${{ inputs.secret-key }} \
+          --dry-run=${{ env.DRY_RUN == 'true' && 'client' || 'none' }} \
+          --output=json | tee image-pull-secret-output.json || true
 
     - name: Deploy
       shell: bash
