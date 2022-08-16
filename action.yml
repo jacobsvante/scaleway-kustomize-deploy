@@ -46,7 +46,7 @@ inputs:
     required: true
     default: "true"
   k8s-dry-run:
-    description: Used to enable `--dry-run=client|server`. See kubectl create/apply help section for more info.
+    description: Used to set `kubectl` option `--dry-run` Valid values are `none` (default), `client` and `server`.
     required: true
     default: "none"
 
