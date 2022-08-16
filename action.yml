@@ -152,7 +152,9 @@ runs:
         kubectl get pod --all-namespaces
         [[ ${{ inputs.k8s-dry-run }} != 'none' ]] \
           && echo "[dry run] Creating k8s docker-registry secret..."
-        kubectl get secret $SECRET_NAME \
+        kubectl get secret \
+          --namespace $K8S_NAMESPACE \
+          $SECRET_NAME \
         || kubectl create secret docker-registry \
           $SECRET_NAME \
           --namespace $K8S_NAMESPACE \
