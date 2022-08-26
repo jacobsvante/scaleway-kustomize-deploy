@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.1...v0.2.2) (2022-08-26)
+
+
+### Bug Fixes
+
+* Logic error in step "Decrypt secrets with `age`" ([b695c38](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/b695c382a2b2da252bce0e293164b3a2926c778c))
+
 ## [0.2.1](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.0...v0.2.1) (2022-08-16)
 
 
