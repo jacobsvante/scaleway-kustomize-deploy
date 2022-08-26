@@ -77,7 +77,7 @@ runs:
 
     - name: Decrypt secrets with `age`
       uses: jacobsvante/age-decrypt-action@v0
-      if: ${{ inputs.age-secret-key && format('{0}/{1}', inputs.kustomization-dir, inputs.encrypted-filename) != '' }}
+      if: ${{ inputs.age-secret-key && inputs.kustomization-dir != '' && inputs.encrypted-filename != '' }}
       with:
         secret-key: ${{ inputs.age-secret-key }}
         input-file: ${{ inputs.kustomization-dir }}/${{ inputs.encrypted-filename }}
