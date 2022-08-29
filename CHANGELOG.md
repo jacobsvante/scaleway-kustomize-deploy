@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.3...v0.3.0) (2022-08-29)
+
+
+### Features
+
+* Support deleting successful jobs pre-deploy ([8048f53](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/8048f5356e4436a4ac4848b297f42f53243670e8))
+
 ## [0.2.3](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.2...v0.2.3) (2022-08-29)
 
 
