@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.2...v0.2.3) (2022-08-29)
+
+
+### Bug Fixes
+
+* Remove unnecessary kubectl commands ([ba60438](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/ba60438c473dd8634eaf5cc6323cce0aef1ab8c1))
+
 ## [0.2.2](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.1...v0.2.2) (2022-08-26)
 
 
