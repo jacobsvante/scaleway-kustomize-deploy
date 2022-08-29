@@ -125,6 +125,7 @@ runs:
           echo "[dry run] Would download kubeconfig from $URL and write to ~/.kube/config"
         else
           curl $URL \
+            --max-time 5 \
             --header "X-Auth-Token: ${{ inputs.secret-key }}" \
             --fail \
             > ~/.kube/config
