@@ -148,8 +148,6 @@ runs:
         SECRET_NAME: rg.${{ inputs.region }}.scw.cloud
         K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
       run: |
-        kubectl get namespace
-        kubectl get pod --all-namespaces
         [[ ${{ inputs.k8s-dry-run }} != 'none' ]] \
           && echo "[dry run] Creating k8s docker-registry secret..."
         kubectl get secret \
