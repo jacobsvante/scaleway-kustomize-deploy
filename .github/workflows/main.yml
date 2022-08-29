@@ -42,6 +42,7 @@ jobs:
           cat <<EOF > kustomization.yaml
           resources:
           - deployment.yaml
+          - job.yaml
           commonLabels:
             app: my-app
             app.kubernetes.io/name: my-app
@@ -75,6 +76,27 @@ jobs:
                           name: my-app
                       - secretRef:
                           name: my-app
+          EOF
+
+          cat <<EOF > job.yaml
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: my-job
+            labels:
+              delete-me: please
+          spec:
+            template:
+              spec:
+                imagePullSecrets:
+                  - name: rg.fr-par.scw.cloud
+                restartPolicy: OnFailure
+                containers:
+                  - name: migrate
+                    args:
+                      - migrate
+                    image: hello-world:latest
+                    imagePullPolicy: IfNotPresent
           EOF
           cd ../..
 
@@ -122,6 +144,7 @@ jobs:
           image-name: my-docker-image
           image-tag: "0.1.2"
           age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
+          pre-deploy-delete-job-selector: delete-me=please
 
       - name: Test that namespace was created
         run: |
@@ -138,6 +161,26 @@ jobs:
           kubectl get deploy -n my-k8s-namespace -o yaml > output.yaml
           grep 'image: rg.fr-par.scw.cloud/my-docker-namespace/my-docker-image:0.1.2' output.yaml
           grep 'namespace: my-k8s-namespace' output.yaml
+
+      - name: Ensure that job exists
+        run: kubectl get -n my-k8s-namespace job/my-job
+
+      - name: Run action again to verify
+        uses: ./
+        with:
+          secret-key: ABC123
+          cluster-id: abc-123-456-789-012
+          region: fr-par
+          docker-namespace: my-docker-namespace
+          kustomization-base-dir: ${{ env.KUSTOMIZATION_BASE_DIR }}
+          kustomization-dir: ${{ env.KUSTOMIZATION_DIR }}
+          image-name: my-docker-image
+          image-tag: "0.1.2"
+          age-secret-key: ${{ env.AGE_TEST_SECRET_KEY }}
+          pre-deploy-delete-job-selector: delete-me=please
+
+      - name: Ensure that job was deleted
+        run: kubectl get -n my-k8s-namespace job/my-job || echo "Job not found, as expected"
 
   post-test:
     needs: [test]

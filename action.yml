@@ -49,6 +49,9 @@ inputs:
     description: Used to set `kubectl` option `--dry-run` Valid values are `none` (default), `client` and `server`.
     required: true
     default: "none"
+  pre-deploy-delete-job-selector:
+    description: Delete objects with `status.successful=1` and the given label (e.g. `autodelete-successful-on-deploy=yes`), before doing the deploy. Useful for e.g. cleaning up a completed db migration job.
+    required: false
 
 runs:
   using: composite
@@ -161,6 +164,17 @@ runs:
           --docker-password=${{ inputs.secret-key }} \
           --dry-run=${{ inputs.k8s-dry-run }} \
           --output=yaml
+
+    - name: Remove successful jobs
+      shell: bash
+      if: ${{ inputs.pre-deploy-delete-job-selector }} != '' }}
+      env:
+        K8S_NAMESPACE: ${{ steps.kustomization_overlay.outputs.namespace || 'default' }}
+      run: |
+        kubectl delete job \
+          --namespace $K8S_NAMESPACE \
+          --field-selector status.successful=1 \
+          --selector '${{ inputs.pre-deploy-delete-job-selector }}'
 
     - name: Deploy
       shell: bash
