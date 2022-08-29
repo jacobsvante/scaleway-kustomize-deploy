@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.3.0...v0.3.1) (2022-08-29)
+
+
+### Bug Fixes
+
+* Limit how long kubeconfig download may take ([61a8c23](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/commit/61a8c23050091a8935fe018dc00e330418fd7795))
+
 ## [0.3.0](https://github.com/jacobsvante/scaleway-kustomize-deploy-action/compare/v0.2.3...v0.3.0) (2022-08-29)
 
 
